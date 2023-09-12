@@ -45,7 +45,6 @@ const App = () => {
             return (slicedData = data);
           else slicedData = data.slice(0, 10);
 
-          console.log(slicedData);
           setRhymes(slicedData);
           setIsLoading(false);
         })
