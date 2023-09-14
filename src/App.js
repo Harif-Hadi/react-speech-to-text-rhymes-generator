@@ -1,104 +1,76 @@
-import SpeechRecognition, {
-  useSpeechRecognition,
-} from "react-speech-recognition";
-
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import "./App.css";
 import { useState, useEffect } from "react";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
   const [rhymes, setRhymes] = useState([]);
-  const [isLoading, setIsLoading] = useState();
-  const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const startListening = () => {
-    SpeechRecognition.startListening({
-      continuous: true,
-      language: "en-US",
-    });
-  };
+  const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
 
-  const stopListening = () => {
-    SpeechRecognition.stopListening();
-  };
+  const lastElement = transcript.split(" ").slice(-1)[0];
 
-  const { transcript, browserSupportsSpeechRecognition } =
-    useSpeechRecognition();
-
-  let splittedText = transcript.split(" ");
-  let lastElement = splittedText[splittedText.length - 1];
-
-  const fetchRhymes = (word) => {
+  const fetchRhymes = async (word) => {
     try {
       setIsLoading(true);
-      fetch(`https://api.api-ninjas.com/v1/rhyme?word=${word}`, {
+      setError(null);
+
+      const response = await fetch(`https://api.api-ninjas.com/v1/rhyme?word=${word}`, {
         method: "GET",
         headers: {
           "X-Api-Key": "bqxQ27vV1HFJgbBrerUbkw==7aZUaesurhAV9iM4",
         },
-        contentType: "application/json",
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          let slicedData;
-          if (data.length === 10 || data.length < 10)
-            return (slicedData = data);
-          else slicedData = data.slice(0, 10);
+      });
 
-          setRhymes(slicedData);
-          setIsLoading(false);
-        })
-        .catch(() => setError(true));
-    } catch (err) {
-      setError(true);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      setRhymes(data.slice(0, 10));
+    } catch (error) {
+      setError(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (lastElement.length === 0) return;
-    else fetchRhymes(lastElement);
+    if (lastElement) {
+      fetchRhymes(lastElement);
+    }
   }, [lastElement]);
 
   const toggleHandler = () => {
-    setToggle(!toggle);
+    setToggle((prevToggle) => !prevToggle);
 
-    if (toggle === false) {
-      startListening();
-    } else if (toggle === true) stopListening();
+    if (!toggle) {
+      SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+    } else {
+      SpeechRecognition.stopListening();
+    }
   };
 
   if (!browserSupportsSpeechRecognition) return null;
 
-  const tryAgainHandler = () => {
-    fetchRhymes(lastElement);
-  };
-
-  let content;
-  if (isLoading) content = <h3>Loading...</h3>;
-
-  if (error)
-    content = (
-      <div>
-        <h3>Faild to fetch</h3>
-        <button onClick={tryAgainHandler} className="try-again_btn">
-          Try Again
-        </button>
-      </div>
-    );
-
-  if (!isLoading) {
-    content = (
-      <div>
-        {rhymes.map((rhyme) => (
-          <h3 key={Math.random() * 6}>{rhyme}</h3>
-        ))}
-      </div>
-    );
-  }
+  const content = isLoading ? (
+    <h3>Loading...</h3>
+  ) : error ? (
+    <div>
+      <h3>Failed to fetch</h3>
+      <button onClick={() => fetchRhymes(lastElement)} className="try-again_btn">
+        Try Again
+      </button>
+    </div>
+  ) : (
+    rhymes.map((rhyme, index) => <h3 key={index}>{rhyme}</h3>)
+  );
 
   return (
     <div>
-      <div className="header">
+     <div className="header">
         <button onClick={toggleHandler}>
           {toggle ? "Stop" : "Start"} Recording
         </button>
