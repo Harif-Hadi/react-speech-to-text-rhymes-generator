@@ -1,12 +1,8 @@
 import useFetch from "../hooks/useFetch";
 
 const Content = ({ lastElement }) => {
-  const { isLoading, rhymes, error, fetchRhymesHandler } =
-    useFetch(lastElement);
+  const { isLoading, rhymes, error, fetchRhymes } = useFetch(lastElement);
 
-  const tryAgainHandler = () => {
-    fetchRhymesHandler(lastElement);
-  };
   let content;
 
   if (isLoading) {
@@ -17,7 +13,10 @@ const Content = ({ lastElement }) => {
     content = (
       <div>
         <h3>Faild to fetch</h3>
-        <button onClick={tryAgainHandler} className="try-again_btn">
+        <button
+          onClick={() => fetchRhymes(lastElement)}
+          className="try-again_btn"
+        >
           Try Again
         </button>
       </div>
@@ -33,6 +32,7 @@ const Content = ({ lastElement }) => {
       </div>
     );
   }
+
   return <div>{content}</div>;
 };
 
